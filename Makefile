@@ -13,6 +13,7 @@ $(shell mkdir -p "$(OUT)")
 export TEST_ASSET_ETCD=_test/kubebuilder/etcd
 export TEST_ASSET_KUBE_APISERVER=_test/kubebuilder/kube-apiserver
 export TEST_ASSET_KUBECTL=_test/kubebuilder/kubectl
+export TEST_ZONE_NAME=jidian-iot.cn.
 
 test: _test/kubebuilder
 	$(GO) test -v .
