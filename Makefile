@@ -2,7 +2,7 @@ GO ?= $(shell which go)
 OS ?= $(shell $(GO) env GOOS)
 ARCH ?= $(shell $(GO) env GOARCH)
 
-IMAGE_NAME := "webhook"
+IMAGE_NAME := "cert-manager-webhook-huawei"
 IMAGE_TAG := "latest"
 
 OUT := $(shell pwd)/_out
@@ -37,7 +37,7 @@ build:
 .PHONY: rendered-manifest.yaml
 rendered-manifest.yaml:
 	helm template \
-	    --name huawei-webhook \
+	    huawei-webhook \
             --set image.repository=$(IMAGE_NAME) \
             --set image.tag=$(IMAGE_TAG) \
             deploy/huawei-webhook > "$(OUT)/rendered-manifest.yaml"
