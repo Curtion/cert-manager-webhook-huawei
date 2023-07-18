@@ -19,3 +19,5 @@ _out
 _test
 
 config.json
+Issuer.yaml
+ClusterIssuer.yaml
