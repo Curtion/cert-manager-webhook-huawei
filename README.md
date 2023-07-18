@@ -4,15 +4,9 @@
 
 # 使用说明
 
-1. clone代码, 执行`helm package ./deploy/huawei-webhook/`生成helm安装包.
-
-2. 修改`MakeFile`的`IMAGE_NAME`值,  执行`make build`生成镜像, 并推送镜像.
-
-3. 在k8s集群内部安装第一步生成的helm包, 修改`values.yaml`的`groupName`值(例如公司域名)和镜像地址.
-
-4. 安装[reflector]([emberstack/kubernetes-reflector: Custom Kubernetes controller that can be used to replicate secrets, configmaps and certificates. (github.com)](https://github.com/EmberStack/kubernetes-reflector)), 用于自动同步申请后的证书到其它命名空间.
-
-5. 配置`Issuer`和`Certificate`
+1. 下载`release`中最新helm包, 在k8s中安装它, 记得修改`groupName`的值(例如公司域名)
+2. 安装[reflector](https://github.com/EmberStack/kubernetes-reflector), 用于自动同步申请后的证书到其它命名空间.
+3. 配置`Issuer`和`Certificate`
 
    ```yaml
    apiVersion: cert-manager.io/v1
@@ -56,3 +50,20 @@
    ```
 
    上述配置会尝试申请`*.jidian-iot.cn`泛域名证书, 并且把证书名命名为`jidian-iot-tls`并放置到`default`命名空间中, 然后`reflector`会自动把证书同步到其它命名空间中.
+
+# yaml配置说明
+
+- region: 区域信息,参考[华为云文档](https://developer.huaweicloud.com/endpoint?DNS)
+- AK: 华为云AK
+- SK: 华为云SK
+- groupName: 和安装webhook时的值保持一致
+- solverName: 固定为`huawei-solver`, 不可修改
+- reflector.v1.k8s.emberstack.com/*: 参考[reflector](https://github.com/EmberStack/kubernetes-reflector)说明
+
+# 测试
+
+修改`testdata/huawei-solver`中`config.json.default`文件名为`config.json`, 并修改其中的配置, 然后执行`make test`进行测试.
+
+# 其它
+
+当然你也可以构建自己的docker镜像, 执行`make build`即可, 只需要在安装helm包时修改镜像地址.
