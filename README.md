@@ -57,6 +57,7 @@
 - region: 区域信息,参考[华为云文档](https://developer.huaweicloud.com/endpoint?DNS)
 - AK: 华为云AK
 - SK: 华为云SK
+- ZoneName: 域名
 - groupName: 和安装webhook时的值保持一致
 - solverName: 固定为`huawei-solver`, 不可修改
 - reflector.v1.k8s.emberstack.com/*: 参考[reflector](https://github.com/EmberStack/kubernetes-reflector)说明
