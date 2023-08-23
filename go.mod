@@ -8,7 +8,7 @@ replace github.com/cert-manager/cert-manager => github.com/cert-manager/cert-man
 
 require (
 	github.com/cert-manager/cert-manager v1.11.0
-	github.com/huaweicloud/huaweicloud-sdk-go-v3 v0.1.47
+	github.com/huaweicloud/huaweicloud-sdk-go-v3 v0.1.55
 	github.com/miekg/dns v1.1.50
 	github.com/stretchr/testify v1.8.4
 	k8s.io/apiextensions-apiserver v0.26.0
