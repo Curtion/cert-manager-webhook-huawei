@@ -26,6 +26,7 @@
                  region: cn-southwest-2
                  AK: XKCD2EQDHF9XGIS851R7
                  SK: tnYnXON5GBzpfl5Ey50MeTvIwA7IRTVbsRqaLy6D
+                 ZoneName: jidian-iot.cn
                groupName: acme.jidian-iot.cn
                solverName: huawei-solver
    ---
