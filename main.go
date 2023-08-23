@@ -15,6 +15,7 @@ import (
 	"github.com/huaweicloud/huaweicloud-sdk-go-v3/core/auth/basic"
 	dns "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/dns/v2"
 	"github.com/huaweicloud/huaweicloud-sdk-go-v3/services/dns/v2/model"
+	dnsregion "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/dns/v2/region"
 )
 
 var GroupName = os.Getenv("GROUP_NAME")
@@ -34,9 +35,10 @@ type huaweiDNSProviderSolver struct {
 }
 
 type huaweiDNSProviderConfig struct {
-	AK     string `json:"AK"`
-	SK     string `json:"SK"`
-	Region string `json:"region"`
+	AK       string `json:"AK"`
+	SK       string `json:"SK"`
+	Region   string `json:"region"`
+	ZoneName string `json:"zoneName"`
 }
 
 func (c *huaweiDNSProviderSolver) Name() string {
@@ -53,16 +55,16 @@ func (c *huaweiDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
 		return err
 	}
 	c.hwClient = createHuaweiClient(cfg.AK, cfg.SK, cfg.Region)
-	record, err := c.ShowRecordSet(ch.ResolvedFQDN)
+	record, err := c.showRecordSet(ch.ResolvedFQDN)
 	if err != nil {
 		return err
 	}
 	if record.Id == nil {
-		zeroId, err := c.GetZeroId(ch.ResolvedZone)
+		zoneId, err := c.GetZoneId(cfg.ZoneName)
 		if err != nil {
 			return err
 		}
-		err = c.CreateRecordSet(zeroId, ch.ResolvedFQDN, ch.Key)
+		err = c.createRecordSet(zoneId, ch.ResolvedFQDN, ch.Key)
 		if err != nil {
 			return err
 		}
@@ -72,7 +74,7 @@ func (c *huaweiDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
 				return nil
 			}
 		}
-		c.UpdateRecordSet(*record.ZoneId, *record.Id, ch.ResolvedFQDN, append(*record.Records, fmt.Sprintf("\"%s\"", ch.Key)))
+		c.updateRecordSet(*record.ZoneId, *record.Id, ch.ResolvedFQDN, append(*record.Records, fmt.Sprintf("\"%s\"", ch.Key)))
 	}
 	return nil
 }
@@ -83,7 +85,7 @@ func (c *huaweiDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
 // 3. 如果记录存在, 则遍历记录值, 删除当前记录值再更新记录
 // 4. 如果记录存在, 且记录值只有一个, 则删除记录
 func (c *huaweiDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
-	record, err := c.ShowRecordSet(ch.ResolvedFQDN)
+	record, err := c.showRecordSet(ch.ResolvedFQDN)
 	if err != nil {
 		return err
 	}
@@ -91,7 +93,7 @@ func (c *huaweiDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
 		return nil
 	} else {
 		if len(*record.Records) == 1 {
-			c.DeleteRecordSet(*record.ZoneId, *record.Id)
+			c.deleteRecordSet(*record.ZoneId, *record.Id)
 		} else {
 			var newRecords []string
 			for _, recordValue := range *record.Records {
@@ -99,7 +101,7 @@ func (c *huaweiDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
 					newRecords = append(newRecords, recordValue)
 				}
 			}
-			c.UpdateRecordSet(*record.ZoneId, *record.Id, ch.ResolvedFQDN, newRecords)
+			c.updateRecordSet(*record.ZoneId, *record.Id, ch.ResolvedFQDN, newRecords)
 		}
 	}
 	return nil
@@ -115,12 +117,11 @@ func (c *huaweiDNSProviderSolver) Initialize(kubeClientConfig *rest.Config, stop
 	return nil
 }
 
-// 获取域名ID
-func (c *huaweiDNSProviderSolver) GetZeroId(ResolvedZone string) (string, error) {
+func (c *huaweiDNSProviderSolver) GetZoneId(ZoneName string) (string, error) {
 	request := &model.ListPublicZonesRequest{}
 	limitRequest := int32(1)
 	request.Limit = &limitRequest
-	nameRequest := ResolvedZone
+	nameRequest := ZoneName
 	request.Name = &nameRequest
 	response, err := c.hwClient.ListPublicZones(request)
 	if err == nil {
@@ -132,10 +133,10 @@ func (c *huaweiDNSProviderSolver) GetZeroId(ResolvedZone string) (string, error)
 }
 
 // 创建解析记录
-func (c *huaweiDNSProviderSolver) CreateRecordSet(ZoneId string, ResolvedFQDN string, Key string) error {
+func (c *huaweiDNSProviderSolver) createRecordSet(ZoneId string, ResolvedFQDN string, Key string) error {
 	request := &model.CreateRecordSetRequest{}
 	request.ZoneId = ZoneId
-	var listRecordsbody = []string{
+	listRecordsbody := []string{
 		fmt.Sprintf("\"%s\"", Key),
 	}
 	request.Body = &model.CreateRecordSetRequestBody{
@@ -148,22 +149,22 @@ func (c *huaweiDNSProviderSolver) CreateRecordSet(ZoneId string, ResolvedFQDN st
 }
 
 // 更新解析记录
-func (c *huaweiDNSProviderSolver) UpdateRecordSet(ZoneId string, RecordsetId string, ResolvedFQDN string, Keys []string) error {
+func (c *huaweiDNSProviderSolver) updateRecordSet(ZoneId string, RecordsetId string, ResolvedFQDN string, Keys []string) error {
 	request := &model.UpdateRecordSetRequest{}
 	request.ZoneId = ZoneId
 	request.RecordsetId = RecordsetId
-	var listRecordsbody = Keys
+	listRecordsbody := Keys
 	request.Body = &model.UpdateRecordSetReq{
 		Records: &listRecordsbody,
 		Type:    "TXT",
-		Name:    "ResolvedFQDN",
+		Name:    ResolvedFQDN,
 	}
 	_, err := c.hwClient.UpdateRecordSet(request)
 	return err
 }
 
 // 删除解析记录
-func (c *huaweiDNSProviderSolver) DeleteRecordSet(ZoneId string, RecordsetId string) error {
+func (c *huaweiDNSProviderSolver) deleteRecordSet(ZoneId string, RecordsetId string) error {
 	request := &model.DeleteRecordSetRequest{}
 	request.ZoneId = ZoneId
 	request.RecordsetId = RecordsetId
@@ -172,7 +173,7 @@ func (c *huaweiDNSProviderSolver) DeleteRecordSet(ZoneId string, RecordsetId str
 }
 
 // 获取解析记录
-func (c *huaweiDNSProviderSolver) ShowRecordSet(ResolvedFQDN string) (model.ListRecordSetsWithTags, error) {
+func (c *huaweiDNSProviderSolver) showRecordSet(ResolvedFQDN string) (model.ListRecordSetsWithTags, error) {
 	request := &model.ListRecordSetsRequest{}
 	limitRequest := int32(1)
 	request.Limit = &limitRequest
@@ -193,10 +194,11 @@ func createHuaweiClient(ak string, sk string, regionName string) *dns.DnsClient 
 		WithAk(ak).
 		WithSk(sk).
 		Build()
+
 	client := dns.NewDnsClient(
 		dns.DnsClientBuilder().
-			WithEndpoints([]string{fmt.Sprintf("https://dns.%s.myhuaweicloud.com", regionName)}).
 			WithCredential(auth).
+			WithRegion(dnsregion.ValueOf(regionName)).
 			Build())
 	return client
 }
